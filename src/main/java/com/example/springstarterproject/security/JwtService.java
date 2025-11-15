@@ -1,15 +1,18 @@
 package com.example.springstarterproject.security;
 
+import com.example.springstarterproject.exceptions.NotFoundException;
 import com.example.springstarterproject.exceptions.UnauthorizedException;
 import com.example.springstarterproject.user.User;
 import com.example.springstarterproject.user.UserRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +25,7 @@ public class JwtService {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
     private final UserRepository userRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Value("${security.jwt.secret}")
     private String JWT_SECRET;
@@ -36,7 +40,19 @@ public class JwtService {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(JWT_SECRET));
     }
 
+    public String getTokenFromHeader(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            String refreshToken = bearerToken.substring(7);
+            return redisTemplate.opsForValue().get(refreshToken);
+        }
+        return null;
+    }
+
     public String generatePasswordResetToken(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow(
+                () -> new NotFoundException("User not found")
+        );
 
         Date now = new Date();
         Date expiration = new Date(now.getTime() + PASSWORD_RESET_TOKEN_EXPIRATION);

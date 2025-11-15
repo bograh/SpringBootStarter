@@ -3,6 +3,7 @@ package com.example.springstarterproject.user.auth;
 import com.example.springstarterproject.user.dtos.AuthResponse;
 import com.example.springstarterproject.user.dtos.LoginRequest;
 import com.example.springstarterproject.user.dtos.SignUpRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,12 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         AuthResponse response = authService.login(loginRequest);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        authService.logout(request);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 }
