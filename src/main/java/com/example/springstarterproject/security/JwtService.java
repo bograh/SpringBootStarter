@@ -1,12 +1,12 @@
 package com.example.springstarterproject.security;
 
-import com.example.springstarterproject.exceptions.NotFoundException;
 import com.example.springstarterproject.exceptions.UnauthorizedException;
 import com.example.springstarterproject.user.User;
 import com.example.springstarterproject.user.UserRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -40,29 +40,20 @@ public class JwtService {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(JWT_SECRET));
     }
 
-    public String getTokenFromHeader(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            String refreshToken = bearerToken.substring(7);
-            return redisTemplate.opsForValue().get(refreshToken);
+    public String getSessionTokenFromRequest(HttpServletRequest request) {
+        String sessionToken = getSessionTokenFromCookie(request);
+        if (sessionToken == null) {
+            sessionToken = getSessionTokenFromHeader(request);
         }
-        return null;
+        return sessionToken;
     }
 
-    public String generatePasswordResetToken(String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new NotFoundException("User not found")
-        );
-
-        Date now = new Date();
-        Date expiration = new Date(now.getTime() + PASSWORD_RESET_TOKEN_EXPIRATION);
-
-        return Jwts.builder()
-                .subject("username")
-                .issuedAt(now)
-                .expiration(expiration)
-                .signWith(getSecretKey())
-                .compact();
+    public String getTokenFromRequest(HttpServletRequest request) {
+        String token = getTokenFromCookie(request);
+        if (token == null) {
+            token = getTokenFromHeader(request);
+        }
+        return token;
     }
 
     public String generateToken(Authentication authentication) {
@@ -117,4 +108,44 @@ public class JwtService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    private String getTokenFromCookie(HttpServletRequest request) {
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if (cookie.getName().equals("SESSION_ID")) {
+                    return redisTemplate.opsForValue().get(cookie.getValue());
+                }
+            }
+        }
+        return null;
+    }
+
+    private String getTokenFromHeader(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            String refreshToken = bearerToken.substring(7);
+            return redisTemplate.opsForValue().get(refreshToken);
+        }
+        return null;
+    }
+
+    private String getSessionTokenFromCookie(HttpServletRequest request) {
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if (cookie.getName().equals("SESSION_ID")) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    private String getSessionTokenFromHeader(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
 }

@@ -15,7 +15,7 @@ public class UserService {
     private final JwtService jwtService;
 
     private String getTokenFromRequest(HttpServletRequest request) {
-        return jwtService.getTokenFromHeader(request);
+        return jwtService.getTokenFromRequest(request);
     }
 
     public UserResponse getProfile(HttpServletRequest request) {

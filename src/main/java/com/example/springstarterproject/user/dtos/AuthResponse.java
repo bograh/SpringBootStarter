@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class AuthResponse {
-    private String refreshToken;
-    private String userEmail;
-    private String message;
+    private AuthResponseDTO authResponseDTO;
+    private CookieHeaders cookieHeaders;
+    private String token;
 }
